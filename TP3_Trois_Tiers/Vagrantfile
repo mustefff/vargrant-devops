@@ -1,0 +1,74 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+# ============================================================
+# Vagrantfile TP3 - 3-Tier Architecture
+# Architecture : Mac Apple Silicon (ARM64)
+# ============================================================
+
+Vagrant.configure("2") do |config|
+
+  # ---------------------------------------------------------------------------
+  # VM 1 : server-dba (MySQL)
+  # ---------------------------------------------------------------------------
+  config.vm.define "server-dba" do |dba|
+    dba.vm.box = "perk/ubuntu-2204-arm64"
+    dba.vm.hostname = "server-dba"
+    
+    # Port Forwarding : Host 3307 -> Guest 3306
+    dba.vm.network "forwarded_port", guest: 3306, host: 3307
+
+    dba.vm.provider "qemu" do |qe|
+      qe.memory = "1G"
+      qe.cpus = 1
+      qe.ssh_auto_correct = true
+    end
+
+    dba.vm.synced_folder ".", "/vagrant", type: "rsync"
+    dba.vm.provision "shell", path: "dba_provision.sh"
+  end
+
+  # ---------------------------------------------------------------------------
+  # VM 2 : server-back (Spring Boot + JDK 17)
+  # ---------------------------------------------------------------------------
+  config.vm.define "server-back" do |back|
+    back.vm.box = "perk/ubuntu-2204-arm64"
+    back.vm.hostname = "server-back"
+
+    # Port Forwarding : Host 8081 -> Guest 8080
+    back.vm.network "forwarded_port", guest: 8080, host: 8081
+
+    back.vm.provider "qemu" do |qe|
+      qe.memory = "2G"
+      qe.cpus = 2
+      qe.ssh_auto_correct = true
+    end
+
+    back.vm.synced_folder ".", "/vagrant", type: "rsync"
+    back.vm.synced_folder "./backend", "/vagrant_back", type: "rsync"
+
+    back.vm.provision "shell", path: "back_provision.sh"
+  end
+
+  # ---------------------------------------------------------------------------
+  # VM 3 : server-front (Nginx + React)
+  # ---------------------------------------------------------------------------
+  config.vm.define "server-front" do |front|
+    front.vm.box = "perk/ubuntu-2204-arm64"
+    front.vm.hostname = "server-front"
+
+    # Port Forwarding : Host 8082 -> Guest 80
+    front.vm.network "forwarded_port", guest: 80, host: 8082
+
+    front.vm.provider "qemu" do |qe|
+      qe.memory = "1G"
+      qe.cpus = 1
+      qe.ssh_auto_correct = true
+    end
+
+    front.vm.synced_folder ".", "/vagrant", type: "rsync"
+    front.vm.synced_folder "./frontend", "/vagrant_front", type: "rsync"
+
+    front.vm.provision "shell", path: "front_provision.sh"
+  end
+
+end

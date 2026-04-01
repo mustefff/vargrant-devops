@@ -1,0 +1,39 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+# ============================================================
+# Vagrantfile pour Mac Apple Silicon (ARM64)
+# Provider : vagrant-qemu  (vagrant plugin install vagrant-qemu)
+# Box      : perk/ubuntu-2204-arm64  (Ubuntu 22.04 ARM64)
+# ============================================================
+
+Vagrant.configure("2") do |config|
+
+  config.vm.define "srv-web" do |web|
+    web.vm.box = "perk/ubuntu-2204-arm64"
+    web.vm.hostname = "srv-web"
+
+    # Port forwarding : hôte 8080 → VM 8080 (Tomcat)
+    web.vm.network "forwarded_port", guest: 8080, host: 8080
+
+    # Dossier racine partagé via RSYNC
+    web.vm.synced_folder ".", "/vagrant", type: "rsync"
+
+    # Dossier app partagé via RSYNC (sans SMB)
+    web.vm.synced_folder "./app", "/vagrant_app",
+      type: "rsync",
+      rsync__auto: true,
+      rsync__exclude: [".git/"],
+      create: true
+
+    # Provider QEMU (Apple Silicon)
+    web.vm.provider "qemu" do |qe|
+      qe.memory    = "2G"
+      qe.cpus      = 2
+      qe.ssh_auto_correct = true
+    end
+
+    # Provisioning automatique au premier démarrage
+    web.vm.provision "shell", path: "provision.sh"
+  end
+
+end
